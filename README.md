@@ -2,13 +2,13 @@
 
 A test management dashboard: teams keep projects and test cases, record test runs, and see pass/fail trends.
 
-**Status:** the REST API (authentication, projects, test cases, runs, statistics) is built and tested against PostgreSQL in CI. The React front end is next.
+**Status:** the REST API (authentication, projects, test cases, runs, statistics) is built and tested against PostgreSQL in CI. The React and TypeScript front end (landing page, login, projects, test cases, run recording, dashboard charts) is built and compiled in CI. Browser tests and deployment are next.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    Browser["React front end (next)"] -->|HTTPS, JSON| API["Express REST API"]
+    Browser["React + TypeScript front end"] -->|HTTPS, JSON| API["Express REST API"]
     API --> Auth["JWT authentication"]
     API --> Val["Input validation (zod)"]
     API -->|SQL| DB[("PostgreSQL")]
@@ -66,7 +66,14 @@ npm run dev
 npm test
 ```
 
+Front end (in a second terminal):
+```bash
+cd client
+npm install
+npm run dev
+# http://localhost:5173, API calls are proxied to port 3000
+```
+
 ## Roadmap
-- React and TypeScript front end with login, test case management and a results chart
 - Browser tests with Playwright
 - Deployed demo
