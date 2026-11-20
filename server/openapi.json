@@ -1,0 +1,159 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "TestTrack API",
+    "version": "1.0.0",
+    "description": "REST API for managing projects, test cases and test runs. Authenticate with a JWT from /api/auth/login and send it as a Bearer token."
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+    },
+    "schemas": {
+      "Credentials": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "minLength": 8, "maxLength": 72 }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "token": { "type": "string" },
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer" },
+              "email": { "type": "string" },
+              "role": { "type": "string", "enum": ["admin", "tester"] }
+            }
+          }
+        }
+      },
+      "ProjectInput": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 100 },
+          "description": { "type": "string", "maxLength": 500 }
+        }
+      },
+      "TestCaseInput": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title": { "type": "string", "maxLength": 200 },
+          "steps": { "type": "string" },
+          "expected": { "type": "string" },
+          "priority": { "type": "string", "enum": ["low", "medium", "high"], "default": "medium" }
+        }
+      },
+      "RunInput": {
+        "type": "object",
+        "required": ["name", "results"],
+        "properties": {
+          "name": { "type": "string" },
+          "results": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["testCaseId", "status"],
+              "properties": {
+                "testCaseId": { "type": "integer" },
+                "status": { "type": "string", "enum": ["pass", "fail", "blocked"] },
+                "notes": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": { "error": { "type": "string" } }
+      }
+    }
+  },
+  "security": [{ "bearerAuth": [] }],
+  "paths": {
+    "/health": {
+      "get": { "summary": "Liveness check", "security": [], "responses": { "200": { "description": "Service is up" } } }
+    },
+    "/api/auth/register": {
+      "post": {
+        "summary": "Create an account (role: tester)",
+        "security": [],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Credentials" } } } },
+        "responses": {
+          "201": { "description": "Account created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } } },
+          "400": { "description": "Validation failed" },
+          "409": { "description": "Email already registered" }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "Log in and receive a JWT",
+        "security": [],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Credentials" } } } },
+        "responses": {
+          "200": { "description": "Logged in", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } } },
+          "401": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": { "summary": "Current user", "responses": { "200": { "description": "The authenticated user" }, "401": { "description": "Missing or invalid token" } } }
+    },
+    "/api/projects": {
+      "get": { "summary": "List your projects (all projects for admins)", "responses": { "200": { "description": "Array of projects with test_case_count" } } },
+      "post": {
+        "summary": "Create a project",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectInput" } } } },
+        "responses": { "201": { "description": "Created" }, "400": { "description": "Validation failed" } }
+      }
+    },
+    "/api/projects/{id}": {
+      "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+      "get": { "summary": "Get a project", "responses": { "200": { "description": "The project" }, "403": { "description": "Not your project" }, "404": { "description": "Not found" } } },
+      "delete": { "summary": "Delete a project and everything in it", "responses": { "204": { "description": "Deleted" }, "403": { "description": "Not your project" }, "404": { "description": "Not found" } } }
+    },
+    "/api/projects/{id}/testcases": {
+      "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+      "get": { "summary": "List test cases of a project", "responses": { "200": { "description": "Array of test cases" } } },
+      "post": {
+        "summary": "Create a test case",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TestCaseInput" } } } },
+        "responses": { "201": { "description": "Created" }, "400": { "description": "Validation failed" } }
+      }
+    },
+    "/api/testcases/{id}": {
+      "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+      "put": {
+        "summary": "Replace a test case",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TestCaseInput" } } } },
+        "responses": { "200": { "description": "Updated" }, "404": { "description": "Not found" } }
+      },
+      "delete": { "summary": "Delete a test case", "responses": { "204": { "description": "Deleted" }, "404": { "description": "Not found" } } }
+    },
+    "/api/projects/{id}/runs": {
+      "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+      "get": { "summary": "List runs with pass/fail/blocked counts", "responses": { "200": { "description": "Array of runs" } } },
+      "post": {
+        "summary": "Record a test run with its results (saved atomically)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RunInput" } } } },
+        "responses": { "201": { "description": "Run recorded" }, "400": { "description": "Invalid results or test cases from another project" } }
+      }
+    },
+    "/api/runs/{id}": {
+      "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+      "get": { "summary": "A run with the result of each test case", "responses": { "200": { "description": "The run" }, "404": { "description": "Not found" } } }
+    },
+    "/api/projects/{id}/stats": {
+      "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+      "get": { "summary": "Dashboard numbers: totals, pass rate and results per run", "responses": { "200": { "description": "Statistics" } } }
+    }
+  }
+}
