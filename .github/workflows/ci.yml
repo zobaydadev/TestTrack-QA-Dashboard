@@ -57,6 +57,65 @@ jobs:
       - name: Type check and build
         run: npm run build
 
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testtrack
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/testtrack
+      JWT_SECRET: ci-only-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build and start the API
+        working-directory: server
+        run: |
+          npm install
+          npm run build
+          nohup node dist/index.js > ../api.log 2>&1 &
+      - name: Build and serve the front end
+        working-directory: client
+        run: |
+          npm install
+          npm run build
+          nohup npx vite preview --port 4173 > ../client.log 2>&1 &
+      - name: Wait for both servers
+        run: |
+          curl --retry 30 --retry-delay 1 --retry-connrefused -sf http://localhost:3000/health
+          curl --retry 30 --retry-delay 1 --retry-connrefused -sf http://localhost:4173/
+      - name: Install Playwright and browsers
+        working-directory: e2e
+        run: |
+          npm install
+          npx playwright install --with-deps chromium
+      - name: Run browser tests
+        working-directory: e2e
+        run: npx playwright test
+      - name: Upload report and server logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+            api.log
+            client.log
+
   docker:
     runs-on: ubuntu-latest
     steps:
