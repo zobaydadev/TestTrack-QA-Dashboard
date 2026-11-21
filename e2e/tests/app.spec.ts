@@ -58,7 +58,8 @@ test.describe('Authentication', () => {
     await page.getByRole('button', { name: 'Log out' }).click();
 
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByRole('link', { name: 'Log in' })).toBeVisible();
+    // The landing page has a Log in link in the header and another in the hero, so scope to the header
+    await expect(page.getByRole('banner').getByRole('link', { name: 'Log in' })).toBeVisible();
   });
 });
 
