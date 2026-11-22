@@ -25,7 +25,7 @@ TestTrack is a full-stack web application for QA teams. A tester creates a **pro
 | **Quality** | 18 automated API tests against a real database, type checking and builds in CI |
 | **Delivery** | Docker, docker-compose and GitHub Actions |
 
-> **Status:** back end and front end are built and verified in CI. Browser tests and a deployed demo are next (see the [roadmap](#-roadmap)).
+> **Status:** back end, front end and browser tests are built and verified in CI. The screenshots below show the running app. There is no hosted demo; run it locally with the steps further down.
 
 ---
 
@@ -38,6 +38,31 @@ TestTrack is a full-stack web application for QA teams. A tester creates a **pro
 - 📊 **Dashboard** with overall pass rate, a results chart and results per run
 - 📖 **API documentation** generated from an OpenAPI 3 file, served at `/docs`
 - 🛡️ **Validation and error handling** that return clear messages instead of server errors
+
+---
+
+## 🖼️ Screenshots
+
+Taken from the running app by a Playwright script in GitHub Actions, using sample data.
+
+<p align="center">
+  <img src="docs/screenshots/01-landing.png" alt="Landing page" width="85%" />
+</p>
+
+<table>
+  <tr>
+    <td width="50%"><b>Dashboard</b><br/><img src="docs/screenshots/07-dashboard.png" alt="Dashboard with pass rate and charts" /></td>
+    <td width="50%"><b>Test cases</b><br/><img src="docs/screenshots/04-test-cases.png" alt="Test case list and form" /></td>
+  </tr>
+  <tr>
+    <td width="50%"><b>Record a run</b><br/><img src="docs/screenshots/05-record-run.png" alt="Recording a test run" /></td>
+    <td width="50%"><b>Run history</b><br/><img src="docs/screenshots/06-history.png" alt="Run history table" /></td>
+  </tr>
+  <tr>
+    <td width="50%"><b>Projects</b><br/><img src="docs/screenshots/03-projects.png" alt="Projects list" /></td>
+    <td width="50%"><b>API documentation (OpenAPI)</b><br/><img src="docs/screenshots/08-api-docs.png" alt="Swagger UI for the REST API" /></td>
+  </tr>
+</table>
 
 ---
 
@@ -170,7 +195,10 @@ Run the API tests: `cd server && npm test`
 Every push runs:
 1. **Server:** type check, 18 API tests against a PostgreSQL service container, production build
 2. **Client:** type check and production build
-3. **Docker:** the server image builds
+3. **Browser tests:** 7 Playwright tests drive the built front end, the API and PostgreSQL together (landing page, sign-up, wrong login, protected pages, log out, the full test management flow, privacy between users)
+4. **Docker:** the server image builds
+
+The screenshots above are refreshed by a separate manual workflow (`Screenshots`) that runs the same stack and saves the images to `docs/screenshots`.
 
 ---
 
@@ -180,6 +208,7 @@ Every push runs:
 - [x] OpenAPI documentation
 - [x] React + TypeScript front end with landing page and dashboard charts
 - [x] CI with a real PostgreSQL service
-- [ ] Browser tests with Playwright
-- [ ] Deployed demo with a public link
-- [ ] Screenshots and a short walkthrough
+- [x] Browser tests with Playwright
+- [x] Screenshots generated from the running app
+- [ ] Hosted demo (optional; the app runs locally with Docker and npm)
+- [ ] Roles: admin and tester permissions in the UI
