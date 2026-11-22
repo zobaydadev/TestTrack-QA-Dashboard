@@ -3,6 +3,8 @@ import { defineConfig, devices } from '@playwright/test';
 // The app and API are started by the CI job (or by hand) before the tests run.
 export default defineConfig({
   testDir: './tests',
+  // The screenshot script only runs when SCREENSHOTS is set (see the Screenshots workflow)
+  testIgnore: process.env.SCREENSHOTS ? [] : ['**/screenshots.spec.ts'],
   timeout: 30_000,
   expect: { timeout: 7_000 },
   fullyParallel: false,
