@@ -1,0 +1,78 @@
+name: Screenshots
+
+# Run this by hand (Actions tab, "Run workflow") to refresh docs/screenshots.
+# It is not triggered by pushes, so it does not add commits on every change.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testtrack
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/testtrack
+      JWT_SECRET: ci-only-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build and start the API
+        working-directory: server
+        run: |
+          npm install
+          npm run build
+          nohup node dist/index.js > ../api.log 2>&1 &
+      - name: Build and serve the front end
+        working-directory: client
+        run: |
+          npm install
+          npm run build
+          nohup npx vite preview --port 4173 > ../client.log 2>&1 &
+      - name: Wait for both servers
+        run: |
+          curl --retry 30 --retry-delay 1 --retry-connrefused -sf http://localhost:3000/health
+          curl --retry 30 --retry-delay 1 --retry-connrefused -sf http://localhost:4173/
+      - name: Install Playwright and browsers
+        working-directory: e2e
+        run: |
+          npm install
+          npx playwright install --with-deps chromium
+      - name: Capture screenshots
+        working-directory: e2e
+        env:
+          SCREENSHOTS: '1'
+        run: npx playwright test screenshots
+      - name: Upload screenshots as an artifact too
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: docs/screenshots
+      - name: Commit the screenshots
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots
+          if git diff --cached --quiet; then
+            echo "No screenshot changes"
+          else
+            git commit -m "Update README screenshots"
+            git pull --rebase
+            git push
+          fi
